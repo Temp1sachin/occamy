@@ -15,11 +15,20 @@ const sidebarItems = [
 
 export default async function OfficerMapPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== 'OFFICER') {
+  if (!session?.user?.email) {
     redirect('/auth/login');
   }
 
-  const userId = (session.user as any).id;
+  // Read authoritative role from database
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user || (user.role !== 'OFFICER' && user.role !== 'ADMIN')) {
+    redirect('/dashboard/admin');
+  }
+
+  const userId = user.id;
 
   const myActivities = await prisma.activityLog.findMany({
     where: { userId },
@@ -34,15 +43,13 @@ export default async function OfficerMapPage() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Your Field Locations</h1>
-          <p className="text-gray-600 mt-1">
-            Map of all your logged activities ({myActivities.length} total)
-          </p>
+      <div className="space-y-8">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-8 rounded-2xl shadow-2xl">
+          <h1 className="text-4xl font-bold">Your Field Locations</h1>
+          <p className="mt-2 text-purple-100 text-lg">Map of all your logged activities ({myActivities.length} total)</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-purple-100">
           <MapViewWrapper activities={myActivities} height="h-screen" />
         </div>
       </div>

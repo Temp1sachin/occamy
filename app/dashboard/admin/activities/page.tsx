@@ -16,8 +16,17 @@ const sidebarItems = [
 
 export default async function ActivitiesPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
+  if (!session?.user?.email) {
     redirect('/auth/login');
+  }
+
+  // Read authoritative role from database
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user || user.role !== 'ADMIN') {
+    redirect('/dashboard/officer');
   }
 
   const activities = await prisma.activityLog.findMany({
@@ -32,57 +41,55 @@ export default async function ActivitiesPage() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">All Activities</h1>
-          <p className="text-gray-600 mt-1">
-            Complete history of field operations ({activities.length} total)
-          </p>
+      <div className="space-y-8">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-8 rounded-2xl shadow-2xl">
+          <h1 className="text-4xl font-bold">All Activities</h1>
+          <p className="mt-2 text-purple-100 text-lg">Complete history of field operations ({activities.length} total)</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-purple-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-200">
+            <thead className="bg-purple-50 border-b border-purple-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Officer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Date & Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">
                     Details
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-purple-100">
                 {activities.map((activity) => (
-                  <tr key={activity.id} className="hover:bg-gray-50 transition">
+                  <tr key={activity.id} className="hover:bg-purple-50 transition-colors duration-200 cursor-pointer group">
                     <td className="px-6 py-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                        className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                           activity.type === 'MEETING'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-purple-100 text-purple-800'
                             : activity.type === 'SALES'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-orange-100 text-orange-800'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-purple-100 text-purple-800'
                         }`}
                       >
                         {activity.type}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
+                      <p className="text-sm font-semibold text-gray-800 group-hover:text-purple-700 transition-colors">{activity.title}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-600 max-w-xs truncate">
@@ -104,7 +111,7 @@ export default async function ActivitiesPage() {
                     <td className="px-6 py-4 text-sm">
                       <Link
                         href={`/dashboard/admin/activities/${activity.id}`}
-                        className="text-green-600 hover:text-green-700 font-medium hover:underline"
+                        className="inline-block px-4 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 font-medium text-xs"
                       >
                         View Details →
                       </Link>
@@ -116,8 +123,8 @@ export default async function ActivitiesPage() {
           </div>
 
           {activities.length === 0 && (
-            <div className="p-12 text-center">
-              <p className="text-gray-600 text-lg">No activities yet</p>
+            <div className="p-16 text-center bg-purple-50">
+              <p className="text-gray-600 text-lg font-medium">No activities yet</p>
             </div>
           )}
         </div>

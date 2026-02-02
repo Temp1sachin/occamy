@@ -10,67 +10,75 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.AUTH0_CLIENT_ID!,
       clientSecret: process.env.AUTH0_CLIENT_SECRET!,
       issuer: process.env.AUTH0_ISSUER_BASE_URL!,
-      async profile(profile) {
-        // Extract role from Auth0 custom claim (single string, not array)
-        const auth0Role = profile['https://occamy-field-ops/role'];
-        const roleFromAuth0 = typeof auth0Role === 'string' ? auth0Role : 'OFFICER';
 
-        // Look up or create user in database
-        let dbUser = await prisma.user.findUnique({
+      async profile(profile) {
+        // Farmer users created via OTP have placeholder emails
+        // Check if this is a farmer
+        const isFarmer = profile.email?.includes('occamy-field-ops.local');
+
+        let user = await prisma.user.findUnique({
           where: { email: profile.email },
         });
 
-        // If user doesn't exist, create with role from Auth0
-        if (!dbUser) {
-          dbUser = await prisma.user.create({
+        if (!user && !isFarmer) {
+          user = await prisma.user.create({
             data: {
-              email: profile.email,
-              name: profile.name || profile.email,
-              username: profile.email.split('@')[0],
-              password: '', // Auth0 handles password
-              role: roleFromAuth0, // Use single string role
+              email: profile.email!,
+              name: profile.name || profile.email!,
+              username: profile.email!.split('@')[0],
+              role: 'OFFICER', // Default to OFFICER, will be updated in assign-role endpoint
             },
           });
         }
 
-        // Return user object with role as string
         return {
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          role: dbUser.role, // ADMIN | OFFICER (string)
-          username: dbUser.username,
+          id: user?.id,
+          email: user?.email,
+          name: user?.name,
         };
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role; // String: ADMIN | OFFICER
         token.email = user.email;
-        token.username = (user as any).username;
       }
+
+      // On every token refresh, read role from database
+      if (token.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email as string },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
+      }
+
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role as string; // String: ADMIN | OFFICER
+        (session.user as any).id = token.id;
         (session.user as any).email = token.email;
-        (session.user as any).username = token.username;
+        (session.user as any).role = token.role; // Include role in session
       }
       return session;
     },
   },
+
   pages: {
     signIn: '/auth/login',
     error: '/auth/error',
   },
+
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
+
   secret: process.env.NEXTAUTH_SECRET,
 };

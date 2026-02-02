@@ -1,5 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ===================================
+// Prisma Schema – Occamy Field Ops
+// ===================================
 
 datasource db {
   provider = "sqlite"
@@ -10,74 +11,148 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// =======================
+// USER MODEL
+// =======================
 model User {
   id        String   @id @default(cuid())
-  username  String   @unique
-  password  String   // Hashed password
+  username  String?  @unique
   email     String   @unique
-  name      String
-  role      String   // 'ADMIN' | 'OFFICER'
+  name      String?
+  role      String   // 'ADMIN' | 'OFFICER' | 'FARMER'
+  phone     String?  // Used mainly for FARMER (OTP-style login)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
+  // Relations
   activityLogs ActivityLog[]
+  confirmations Confirmation[]
 }
 
+// =======================
+// ACTIVITY LOG
+// =======================
 model ActivityLog {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // 'MEETING' | 'SALES' | 'DISTRIBUTION'
+
+  type        String   // 'DAY_START' | 'DAY_END' | 'MEETING' | 'SALES' | 'DISTRIBUTION'
   title       String
   description String?
+
   latitude    Float?
   longitude   Float?
   timestamp   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relationship to specific types
-  meeting     MeetingDetails?
-  sale        SaleDetails?
+
+  // Proof & verification
+  photoUrls   String?  // JSON array of photo URLs (comma-separated for SQLite)
+  verified    Boolean  @default(false)
+
+  // Relations
+  meeting      MeetingDetails?
+  sale         SaleDetails?
   distribution DistributionDetails?
+  confirmations Confirmation[]
 }
 
+// =======================
+// MEETING DETAILS
+// =======================
 model MeetingDetails {
-  id                    String @id @default(cuid())
-  logId                 String @unique
-  log                   ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
-  attendeeName          String
-  category              String // 'FARMER' | 'SELLER' | 'INFLUENCER'
-  contactPhone          String?
-  contactEmail          String?
-  businessPotential     String? // e.g., "5-10 kg", "200 kg", "High"
-  duration              Int?   // in minutes
-  notes                 String?
-  isGroupMeeting        Boolean @default(false)
-  groupSize            Int? // for group meetings
-  meetingType          String? // for group meetings: 'Training', 'Demo', 'Feedback', etc.
+  id                String @id @default(cuid())
+  logId             String @unique
+  log               ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
+  attendeeName      String
+  category          String   // 'FARMER' | 'SELLER' | 'INFLUENCER'
+  contactPhone      String?
+  contactEmail      String?
+
+  businessPotential String?
+  duration          Int?
+  notes             String?
+
+  isGroupMeeting    Boolean @default(false)
+  groupSize         Int?
+  meetingType       String? // 'Training' | 'Demo' | 'Feedback'
+
+  meetingMode       String @default("IN_PERSON") // 'IN_PERSON' | 'VIDEO'
+  callDuration      Int?
 }
 
+// =======================
+// SALES DETAILS
+// =======================
 model SaleDetails {
   id              String @id @default(cuid())
   logId           String @unique
   log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
   productName     String
   quantity        Float
-  unit            String // 'kg' | 'liter' | 'unit'
-  amount          Float  // in currency
+  unit            String
+  amount          Float
   buyerName       String
+
   saleMode        String @default("DIRECT") // 'DIRECT' | 'VIA_DISTRIBUTOR'
   isRepeatOrder   Boolean @default(false)
+
+  paymentMode     String @default("CASH")   // 'CASH' | 'UPI'
+  upiTxnId        String?
+  paymentStatus   String @default("PENDING") // 'PENDING' | 'PAID'
+
   notes           String?
 }
 
+// =======================
+// DISTRIBUTION DETAILS
+// =======================
 model DistributionDetails {
   id              String @id @default(cuid())
   logId           String @unique
   log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
   productName     String
   quantity        Float
-  unit            String // 'kg' | 'liter' | 'unit'
+  unit            String
   distributedTo   String
+  purpose         String? // 'TRIAL' | 'DEMO' | 'FOLLOW_UP'
+
   notes           String?
+}
+
+// =======================
+// OTP VERIFICATION (FARMER LOGIN)
+// =======================
+model OTP {
+  id        String   @id @default(cuid())
+  phone     String   // Phone number attempting to login
+  code      String   // 6-digit OTP code
+  expiresAt DateTime // Expiration time (5 minutes)
+  attempts  Int      @default(0)
+  maxAttempts Int   @default(3)
+  verified  Boolean  @default(false)
+  userId    String?  // User ID once verified
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([userId])
+}
+
+// =======================
+// CONFIRMATION (FARMER VERIFICATION)
+// =======================
+model Confirmation {
+  id          String   @id @default(cuid())
+  activityId  String
+  activity    ActivityLog @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  confirmed   Boolean @default(false)
+  createdAt   DateTime @default(now())
 }

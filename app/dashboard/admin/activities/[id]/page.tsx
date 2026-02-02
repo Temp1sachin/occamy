@@ -17,21 +17,30 @@ export default async function ActivityDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== 'ADMIN') {
+  if (!session?.user?.email) {
     redirect('/auth/login');
+  }
+
+  // Read authoritative role from database
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user || user.role !== 'ADMIN') {
+    redirect('/dashboard/officer');
   }
 
   const { id } = await params;
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Activity Details</h1>
-          <p className="text-gray-600 mt-1">View complete activity information</p>
+      <div className="space-y-8">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-8 rounded-2xl shadow-2xl">
+          <h1 className="text-4xl font-bold">Activity Details</h1>
+          <p className="mt-2 text-purple-100 text-lg">View complete activity information</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-purple-100 p-8">
           <ActivityDetails id={id} />
         </div>
       </div>
