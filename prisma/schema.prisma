@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed password
+  email     String   @unique
+  name      String
+  role      String   // 'ADMIN' | 'OFFICER'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  activityLogs ActivityLog[]
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // 'MEETING' | 'SALES' | 'DISTRIBUTION'
+  title       String
+  description String?
+  latitude    Float?
+  longitude   Float?
+  timestamp   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationship to specific types
+  meeting     MeetingDetails?
+  sale        SaleDetails?
+  distribution DistributionDetails?
+}
+
+model MeetingDetails {
+  id              String @id @default(cuid())
+  logId           String @unique
+  log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  attendeeName    String
+  category        String // 'FARMER' | 'SELLER' | 'INFLUENCER'
+  duration        Int?   // in minutes
+  notes           String?
+}
+
+model SaleDetails {
+  id              String @id @default(cuid())
+  logId           String @unique
+  log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  productName     String
+  quantity        Float
+  unit            String // 'kg' | 'liter' | 'unit'
+  amount          Float  // in currency
+  buyerName       String
+  notes           String?
+}
+
+model DistributionDetails {
+  id              String @id @default(cuid())
+  logId           String @unique
+  log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  productName     String
+  quantity        Float
+  unit            String // 'kg' | 'liter' | 'unit'
+  distributedTo   String
+  notes           String?
+}
