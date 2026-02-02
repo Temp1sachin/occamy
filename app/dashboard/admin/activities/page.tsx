@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PrismaClient } from '@prisma/client';
 import { BarChart3, Map, Eye } from 'lucide-react';
+import Link from 'next/link';
 
 const prisma = new PrismaClient();
 
@@ -101,55 +102,12 @@ export default async function ActivitiesPage() {
                       </p>
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      {activity.meeting && (
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <span className="font-semibold">Attendee:</span>{' '}
-                            {activity.meeting.attendeeName}
-                          </p>
-                          <p>
-                            <span className="font-semibold">Category:</span>{' '}
-                            {activity.meeting.category}
-                          </p>
-                          {activity.meeting.duration && (
-                            <p>
-                              <span className="font-semibold">Duration:</span>{' '}
-                              {activity.meeting.duration} min
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      {activity.sale && (
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <span className="font-semibold">Product:</span>{' '}
-                            {activity.sale.productName}
-                          </p>
-                          <p>
-                            <span className="font-semibold">Qty:</span> {activity.sale.quantity}{' '}
-                            {activity.sale.unit}
-                          </p>
-                          <p>
-                            <span className="font-semibold">Amount:</span> ₹{activity.sale.amount}
-                          </p>
-                        </div>
-                      )}
-                      {activity.distribution && (
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <span className="font-semibold">Product:</span>{' '}
-                            {activity.distribution.productName}
-                          </p>
-                          <p>
-                            <span className="font-semibold">Qty:</span>{' '}
-                            {activity.distribution.quantity} {activity.distribution.unit}
-                          </p>
-                          <p>
-                            <span className="font-semibold">To:</span>{' '}
-                            {activity.distribution.distributedTo}
-                          </p>
-                        </div>
-                      )}
+                      <Link
+                        href={`/dashboard/admin/activities/${activity.id}`}
+                        className="text-green-600 hover:text-green-700 font-medium hover:underline"
+                      >
+                        View Details →
+                      </Link>
                     </td>
                   </tr>
                 ))}

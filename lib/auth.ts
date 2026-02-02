@@ -1,46 +1,41 @@
 import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import Auth0Provider from 'next-auth/providers/auth0';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        username: { label: 'Username', type: 'text', placeholder: 'admin' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username },
+    Auth0Provider({
+      clientId: process.env.AUTH0_CLIENT_ID!,
+      clientSecret: process.env.AUTH0_CLIENT_SECRET!,
+      issuer: process.env.AUTH0_ISSUER_BASE_URL!,
+      async profile(profile) {
+        // Look up or create user in database
+        let dbUser = await prisma.user.findUnique({
+          where: { email: profile.email },
         });
 
-        if (!user) {
-          return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
+        // If user doesn't exist, create them with default role from Auth0 or default OFFICER
+        if (!dbUser) {
+          const role = profile['https://occamy-field-ops/role'] || 'OFFICER';
+          dbUser = await prisma.user.create({
+            data: {
+              email: profile.email,
+              name: profile.name || profile.email,
+              username: profile.email.split('@')[0],
+              password: '', // Auth0 handles password
+              role: role as any,
+            },
+          });
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          username: user.username,
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name,
+          role: dbUser.role,
+          username: dbUser.username,
         };
       },
     }),

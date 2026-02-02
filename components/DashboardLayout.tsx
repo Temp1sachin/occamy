@@ -1,7 +1,6 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
@@ -23,6 +22,9 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const userName = (session?.user as any)?.name || session?.user?.email || 'User';
+  const role = (session?.user as any)?.role || 'OFFICER';
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -91,11 +93,18 @@ export function DashboardLayout({
           <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              {(session?.user as any)?.name}
+              {userName}
             </span>
             <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-              {(session?.user as any)?.role}
+              {role}
             </span>
+            <button
+              onClick={() => signOut()}
+              className="text-gray-600 hover:text-gray-900"
+              title="Sign out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
 

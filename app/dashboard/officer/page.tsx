@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { ActivityForm } from '@/components/ActivityForm';
-import { MapView } from '@/components/MapView';
+import { MapViewWrapper } from '@/components/MapViewWrapper';
 import { PrismaClient } from '@prisma/client';
 import { Plus, Map } from 'lucide-react';
 import Link from 'next/link';
@@ -85,7 +85,7 @@ export default async function OfficerDashboard() {
               </Link>
             </div>
             <div className="flex-1">
-              <MapView activities={myActivities} height="h-96" />
+              <MapViewWrapper activities={myActivities} height="h-96" />
             </div>
           </div>
         </div>

@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { MapView } from '@/components/MapView';
-import { ActivityAnalytics } from '@/components/ActivityAnalytics';
+import { MapViewWrapper } from '@/components/MapViewWrapper';
+import { AdminDashboardMetrics } from '@/components/AdminDashboardMetrics';
 import { PrismaClient } from '@prisma/client';
 import { BarChart3, Map, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -65,12 +65,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Analytics Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Activity Analytics</h2>
-          <ActivityAnalytics activities={activities} />
-        </div>
-
-        {/* Map View */}
+        <AdminDashboardMetrics activities={activities} />
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Field Operations Map</h2>
@@ -81,7 +76,7 @@ export default async function AdminDashboard() {
               View Full Map →
             </Link>
           </div>
-          <MapView activities={activities} height="h-96" />
+          <MapViewWrapper activities={activities} height="h-96" />
         </div>
 
         {/* Recent Activities Table */}

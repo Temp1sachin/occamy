@@ -42,13 +42,19 @@ model ActivityLog {
 }
 
 model MeetingDetails {
-  id              String @id @default(cuid())
-  logId           String @unique
-  log             ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
-  attendeeName    String
-  category        String // 'FARMER' | 'SELLER' | 'INFLUENCER'
-  duration        Int?   // in minutes
-  notes           String?
+  id                    String @id @default(cuid())
+  logId                 String @unique
+  log                   ActivityLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  attendeeName          String
+  category              String // 'FARMER' | 'SELLER' | 'INFLUENCER'
+  contactPhone          String?
+  contactEmail          String?
+  businessPotential     String? // e.g., "5-10 kg", "200 kg", "High"
+  duration              Int?   // in minutes
+  notes                 String?
+  isGroupMeeting        Boolean @default(false)
+  groupSize            Int? // for group meetings
+  meetingType          String? // for group meetings: 'Training', 'Demo', 'Feedback', etc.
 }
 
 model SaleDetails {
@@ -60,6 +66,8 @@ model SaleDetails {
   unit            String // 'kg' | 'liter' | 'unit'
   amount          Float  // in currency
   buyerName       String
+  saleMode        String @default("DIRECT") // 'DIRECT' | 'VIA_DISTRIBUTOR'
+  isRepeatOrder   Boolean @default(false)
   notes           String?
 }
 

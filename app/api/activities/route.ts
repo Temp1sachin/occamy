@@ -70,8 +70,14 @@ export async function POST(req: NextRequest) {
           logId: activity.id,
           attendeeName: data.meeting.attendeeName,
           category: data.meeting.category,
+          contactPhone: data.meeting.contactPhone || null,
+          contactEmail: data.meeting.contactEmail || null,
+          businessPotential: data.meeting.businessPotential || null,
           duration: data.meeting.duration,
           notes: data.meeting.notes,
+          isGroupMeeting: data.meeting.isGroupMeeting || false,
+          groupSize: data.meeting.groupSize || null,
+          meetingType: data.meeting.meetingType || null,
         },
       });
     } else if (data.type === 'SALES' && data.sale) {
@@ -83,6 +89,8 @@ export async function POST(req: NextRequest) {
           unit: data.sale.unit,
           amount: data.sale.amount,
           buyerName: data.sale.buyerName,
+          saleMode: data.sale.saleMode || 'DIRECT',
+          isRepeatOrder: data.sale.isRepeatOrder || false,
           notes: data.sale.notes,
         },
       });

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { MapPin, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, AlertCircle, Phone, Mail, TrendingUp, Users } from 'lucide-react';
 
 interface ActivityFormProps {
   onSuccess?: () => void;
@@ -9,6 +9,9 @@ interface ActivityFormProps {
 
 export function ActivityForm({ onSuccess }: ActivityFormProps) {
   const [type, setType] = useState<'MEETING' | 'SALES' | 'DISTRIBUTION'>('MEETING');
+  const [meetingType, setMeetingType] = useState<'INDIVIDUAL' | 'GROUP'>('INDIVIDUAL');
+  
+  // Common fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [latitude, setLatitude] = useState('');
@@ -17,11 +20,19 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // Meeting fields
+  // Meeting fields - Individual
   const [attendeeName, setAttendeeName] = useState('');
   const [category, setCategory] = useState<'FARMER' | 'SELLER' | 'INFLUENCER'>('FARMER');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [businessPotential, setBusinessPotential] = useState('');
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Meeting fields - Group
+  const [groupVillage, setGroupVillage] = useState('');
+  const [groupSize, setGroupSize] = useState('');
+  const [groupMeetingType, setGroupMeetingType] = useState('Training');
 
   // Sale fields
   const [productName, setProductName] = useState('');
@@ -29,13 +40,16 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
   const [unit, setUnit] = useState('kg');
   const [amount, setAmount] = useState('');
   const [buyerName, setBuyerName] = useState('');
+  const [saleMode, setSaleMode] = useState('DIRECT');
+  const [isRepeatOrder, setIsRepeatOrder] = useState(false);
 
   // Distribution fields
+  const [distProductName, setDistProductName] = useState('');
+  const [distQuantity, setDistQuantity] = useState('');
+  const [distUnit, setDistUnit] = useState('kg');
   const [distributedTo, setDistributedTo] = useState('');
+  const [distNotes, setDistNotes] = useState('');
 
-  const mapRef = useRef<any>(null);
-
-  // Get current location
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -70,12 +84,27 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       };
 
       if (type === 'MEETING') {
-        payload.meeting = {
-          attendeeName,
-          category,
-          duration: duration ? parseInt(duration) : null,
-          notes,
-        };
+        if (meetingType === 'INDIVIDUAL') {
+          payload.meeting = {
+            attendeeName,
+            category,
+            contactPhone: contactPhone || null,
+            contactEmail: contactEmail || null,
+            businessPotential: businessPotential || null,
+            duration: duration ? parseInt(duration) : null,
+            notes,
+            isGroupMeeting: false,
+          };
+        } else {
+          payload.meeting = {
+            attendeeName: groupVillage,
+            category: 'FARMER',
+            groupSize: groupSize ? parseInt(groupSize) : null,
+            meetingType: groupMeetingType,
+            notes,
+            isGroupMeeting: true,
+          };
+        }
       } else if (type === 'SALES') {
         payload.sale = {
           productName,
@@ -83,15 +112,17 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
           unit,
           amount: parseFloat(amount),
           buyerName,
+          saleMode,
+          isRepeatOrder,
           notes,
         };
       } else if (type === 'DISTRIBUTION') {
         payload.distribution = {
-          productName,
-          quantity: parseFloat(quantity),
-          unit,
+          productName: distProductName,
+          quantity: parseFloat(distQuantity),
+          unit: distUnit,
           distributedTo,
-          notes,
+          notes: distNotes,
         };
       }
 
@@ -106,21 +137,7 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       }
 
       setSuccess(true);
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setLatitude('');
-      setLongitude('');
-      setAttendeeName('');
-      setCategory('FARMER');
-      setDuration('');
-      setNotes('');
-      setProductName('');
-      setQuantity('');
-      setAmount('');
-      setBuyerName('');
-      setDistributedTo('');
-
+      resetForm();
       onSuccess?.();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -130,8 +147,33 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setLatitude('');
+    setLongitude('');
+    setAttendeeName('');
+    setCategory('FARMER');
+    setContactPhone('');
+    setContactEmail('');
+    setBusinessPotential('');
+    setDuration('');
+    setNotes('');
+    setGroupVillage('');
+    setGroupSize('');
+    setProductName('');
+    setQuantity('');
+    setAmount('');
+    setBuyerName('');
+    setSaleMode('DIRECT');
+    setIsRepeatOrder(false);
+    setDistProductName('');
+    setDistQuantity('');
+    setDistributedTo('');
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Success Message */}
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -147,130 +189,134 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
         </div>
       )}
 
-      {/* Activity Type */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-3">
-          Activity Type
-        </label>
-        <div className="grid grid-cols-3 gap-3">
+      {/* Activity Type Selection */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <label className="block text-sm font-semibold text-gray-700 mb-3">Activity Type</label>
+        <div className="flex gap-4">
           {['MEETING', 'SALES', 'DISTRIBUTION'].map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t as any)}
-              className={`p-4 rounded-lg border-2 font-medium transition ${
-                type === t
-                  ? 'border-green-600 bg-green-50 text-green-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {t}
-            </button>
+            <label key={t} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value={t}
+                checked={type === t}
+                onChange={(e) => setType(e.target.value as any)}
+                className="w-4 h-4 text-green-600"
+              />
+              <span className="text-sm font-medium text-gray-700">{t}</span>
+            </label>
           ))}
         </div>
       </div>
 
       {/* Common Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Title *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-            placeholder="e.g., Farmer John Meeting"
+            placeholder="Activity title"
             required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <input
-            type="text"
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-            placeholder="Optional description"
+            placeholder="Additional details..."
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
       </div>
 
-      {/* Location Fields */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <MapPin className="w-4 h-4" /> Location
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Latitude
-            </label>
-            <input
-              type="number"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              step="0.00001"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., 28.7041"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Longitude
-            </label>
-            <input
-              type="number"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              step="0.00001"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., 77.1025"
-            />
-          </div>
+      {/* Location */}
+      <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-blue-600" />
+          <span className="font-medium text-gray-700">Location</span>
         </div>
-
         <button
           type="button"
           onClick={getCurrentLocation}
-          className="px-4 py-2 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
         >
-          📍 Use Current Location
+          📍 Get Current Location
         </button>
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="number"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value)}
+            placeholder="Latitude"
+            step="0.0001"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="number"
+            value={longitude}
+            onChange={(e) => setLongitude(e.target.value)}
+            placeholder="Longitude"
+            step="0.0001"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
-      {/* Type-Specific Fields */}
+      {/* Meeting Type Selection */}
       {type === 'MEETING' && (
-        <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="font-semibold text-gray-800">Meeting Details</h3>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Attendee Name *
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Meeting Type</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="INDIVIDUAL"
+                checked={meetingType === 'INDIVIDUAL'}
+                onChange={(e) => setMeetingType(e.target.value as any)}
+                className="w-4 h-4 text-purple-600"
+              />
+              <span className="text-sm font-medium text-gray-700">Individual Meeting</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="GROUP"
+                checked={meetingType === 'GROUP'}
+                onChange={(e) => setMeetingType(e.target.value as any)}
+                className="w-4 h-4 text-purple-600"
+              />
+              <span className="text-sm font-medium text-gray-700">Group Meeting</span>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Fields - Individual */}
+      {type === 'MEETING' && meetingType === 'INDIVIDUAL' && (
+        <div className="space-y-4 bg-purple-50 p-4 rounded-lg">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name of Person</label>
             <input
               type="text"
               value={attendeeName}
               onChange={(e) => setAttendeeName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="Name of person met"
+              placeholder="Full name"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             >
               <option value="FARMER">Farmer</option>
               <option value="SELLER">Seller</option>
@@ -278,170 +324,268 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
             </select>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-gray-300">
+              <Phone className="w-4 h-4 text-gray-500" />
+              <input
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="Phone"
+                className="flex-1 outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-gray-300">
+              <Mail className="w-4 h-4 text-gray-500" />
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="Email"
+                className="flex-1 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-gray-300">
+            <TrendingUp className="w-4 h-4 text-green-600" />
+            <input
+              type="text"
+              value={businessPotential}
+              onChange={(e) => setBusinessPotential(e.target.value)}
+              placeholder="Business potential (e.g., 5-10 kg, 200 kg, High)"
+              className="flex-1 outline-none"
+            />
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Duration (minutes)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
             <input
               type="number"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., 30"
+              placeholder="Meeting duration"
+              min="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="Additional notes about the meeting"
+              placeholder="Meeting notes..."
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
         </div>
       )}
 
-      {type === 'SALES' && (
-        <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
-          <h3 className="font-semibold text-gray-800">Sales Details</h3>
+      {/* Meeting Fields - Group */}
+      {type === 'MEETING' && meetingType === 'GROUP' && (
+        <div className="space-y-4 bg-purple-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-gray-700 mb-4">
+            <Users className="w-4 h-4" />
+            <span>Farmer Group Meeting Details</span>
+          </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Product Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Village / Location</label>
             <input
               type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., Organic Tomatoes"
+              value={groupVillage}
+              onChange={(e) => setGroupVillage(e.target.value)}
+              placeholder="Village or location name"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Quantity *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of Attendees</label>
               <input
                 type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                step="0.01"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                placeholder="e.g., 50"
+                value={groupSize}
+                onChange={(e) => setGroupSize(e.target.value)}
+                placeholder="Number of people"
+                min="1"
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Type</label>
+              <select
+                value={groupMeetingType}
+                onChange={(e) => setGroupMeetingType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                <option>Training</option>
+                <option>Demo</option>
+                <option>Feedback</option>
+                <option>Promotion</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Meeting notes, photos taken, etc..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Sales Fields */}
+      {type === 'SALES' && (
+        <div className="space-y-4 bg-green-50 p-4 rounded-lg">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              placeholder="Product SKU or name"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="Qty"
+                step="0.1"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
               >
                 <option value="kg">kg</option>
                 <option value="liter">liter</option>
                 <option value="unit">unit</option>
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Amount"
+                step="0.01"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount (₹) *
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              step="0.01"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., 5000"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buyer Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Buyer Name</label>
             <input
               type="text"
               value={buyerName}
               onChange={(e) => setBuyerName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
               placeholder="Name of buyer"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sale Mode</label>
+              <select
+                value={saleMode}
+                onChange={(e) => setSaleMode(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              >
+                <option value="DIRECT">Direct (B2C)</option>
+                <option value="VIA_DISTRIBUTOR">Via Distributor (B2B)</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg border border-gray-300">
+              <input
+                type="checkbox"
+                checked={isRepeatOrder}
+                onChange={(e) => setIsRepeatOrder(e.target.checked)}
+                className="w-4 h-4 text-green-600"
+              />
+              <span className="text-sm font-medium text-gray-700">Repeat Order</span>
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              placeholder="Sale details..."
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="Additional notes about the sale"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />
           </div>
         </div>
       )}
 
+      {/* Distribution Fields */}
       {type === 'DISTRIBUTION' && (
-        <div className="space-y-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
-          <h3 className="font-semibold text-gray-800">Distribution Details</h3>
-
+        <div className="space-y-4 bg-orange-50 p-4 rounded-lg">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Product Name *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
             <input
               type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., Fertilizer"
+              value={distProductName}
+              onChange={(e) => setDistProductName(e.target.value)}
+              placeholder="Product SKU or name"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Quantity *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
               <input
                 type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                step="0.01"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                placeholder="e.g., 100"
+                value={distQuantity}
+                onChange={(e) => setDistQuantity(e.target.value)}
+                placeholder="Qty"
+                step="0.1"
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
               <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+                value={distUnit}
+                onChange={(e) => setDistUnit(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="kg">kg</option>
                 <option value="liter">liter</option>
@@ -451,29 +595,25 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Distributed To *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Distributed To</label>
             <input
               type="text"
               value={distributedTo}
               onChange={(e) => setDistributedTo(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="Name or location"
+              placeholder="Farmer / Seller / Person name"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={distNotes}
+              onChange={(e) => setDistNotes(e.target.value)}
+              placeholder="Distribution details..."
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              placeholder="Additional notes about the distribution"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
@@ -483,9 +623,9 @@ export function ActivityForm({ onSuccess }: ActivityFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
       >
-        {loading ? 'Logging Activity...' : '📝 Log Activity'}
+        {loading ? 'Saving...' : '✓ Log Activity'}
       </button>
     </form>
   );

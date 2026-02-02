@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { MapView } from '@/components/MapView';
+import { MapViewWrapper } from '@/components/MapViewWrapper';
 import { PrismaClient } from '@prisma/client';
 import { Plus, Map } from 'lucide-react';
 
@@ -43,7 +43,7 @@ export default async function OfficerMapPage() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <MapView activities={myActivities} height="h-screen" />
+          <MapViewWrapper activities={myActivities} height="h-screen" />
         </div>
       </div>
     </DashboardLayout>
