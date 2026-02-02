@@ -11,30 +11,34 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.AUTH0_CLIENT_SECRET!,
       issuer: process.env.AUTH0_ISSUER_BASE_URL!,
       async profile(profile) {
+        // Extract role from Auth0 custom claim (single string, not array)
+        const auth0Role = profile['https://occamy-field-ops/role'];
+        const roleFromAuth0 = typeof auth0Role === 'string' ? auth0Role : 'OFFICER';
+
         // Look up or create user in database
         let dbUser = await prisma.user.findUnique({
           where: { email: profile.email },
         });
 
-        // If user doesn't exist, create them with default role from Auth0 or default OFFICER
+        // If user doesn't exist, create with role from Auth0
         if (!dbUser) {
-          const role = profile['https://occamy-field-ops/role'] || 'OFFICER';
           dbUser = await prisma.user.create({
             data: {
               email: profile.email,
               name: profile.name || profile.email,
               username: profile.email.split('@')[0],
               password: '', // Auth0 handles password
-              role: role as any,
+              role: roleFromAuth0, // Use single string role
             },
           });
         }
 
+        // Return user object with role as string
         return {
           id: dbUser.id,
           email: dbUser.email,
           name: dbUser.name,
-          role: dbUser.role,
+          role: dbUser.role, // ADMIN | OFFICER (string)
           username: dbUser.username,
         };
       },
@@ -44,7 +48,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = (user as any).role; // String: ADMIN | OFFICER
+        token.email = user.email;
         token.username = (user as any).username;
       }
       return token;
@@ -52,7 +57,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role;
+        (session.user as any).role = token.role as string; // String: ADMIN | OFFICER
+        (session.user as any).email = token.email;
         (session.user as any).username = token.username;
       }
       return session;
